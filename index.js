@@ -6,24 +6,24 @@ const router = require("./routes");
 
 const app = express();
 
-// ✅ Middleware
+// ✅ Middleware to parse JSON
 app.use(express.json());
 
-// ✅ CORS Configuration (very important for frontend-backend communication)
+// ✅ CORS Configuration (important for frontend-backend communication)
 app.use(
   cors({
-    origin: "http://localhost:5173", // your frontend URL
+    origin: "https://simpet.netlify.app", // your live frontend URL
     credentials: true, // allows cookies and authentication headers
   })
 );
 
-// ✅ Static folder for image uploads
+// ✅ Serve static files for image uploads
 app.use("/uploads", express.static("uploads"));
 
 // ✅ Main API route
 app.use("/api", router);
 
-// ✅ Default route (optional but useful for testing)
+// ✅ Default route for testing
 app.get("/", (req, res) => {
   res.send("✅ Backend API is running...");
 });
