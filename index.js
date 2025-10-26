@@ -1,37 +1,69 @@
+// ==========================
+// Backend Entry File: index.js
+// ==========================
+
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const connectDB = require("./config/db");
-const router = require("./routes");
+const connectDB = require("./config/db"); // your MongoDB connection file
+const router = require("./routes"); // your routes
 
 const app = express();
 
-// ✅ Middleware to parse JSON
-app.use(express.json());
+// ==========================
+// Middleware
+// ==========================
+app.use(express.json()); // parse JSON request bodies
 
-// ✅ CORS Configuration (important for frontend-backend communication)
+// ==========================
+// CORS Configuration
+// ==========================
+// Allow local development + live frontend
+const allowedOrigins = [
+  "http://localhost:5173",         // Vite dev server
+  "https://simpet.netlify.app"     // your deployed frontend
+];
+
 app.use(
   cors({
-    origin: "https://simpet.netlify.app", // your live frontend URL
-    credentials: true, // allows cookies and authentication headers
+    origin: function (origin, callback) {
+      // allow requests with no origin like Postman
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true, // allow cookies/auth headers
   })
 );
 
-// ✅ Serve static files for image uploads
+// ==========================
+// Static Folder for Images
+// ==========================
 app.use("/uploads", express.static("uploads"));
 
-// ✅ Main API route
+// ==========================
+// Main API Routes
+// ==========================
 app.use("/api", router);
 
-// ✅ Default route for testing
+// ==========================
+// Default Test Route
+// ==========================
 app.get("/", (req, res) => {
   res.send("✅ Backend API is running...");
 });
 
-// ✅ PORT setup
+// ==========================
+// PORT Setup
+// ==========================
 const PORT = process.env.PORT || 5000;
 
-// ✅ Connect to MongoDB, then start server
+// ==========================
+// Connect to MongoDB & Start Server
+// ==========================
 connectDB()
   .then(() => {
     app.listen(PORT, () => {
@@ -44,3 +76,5 @@ connectDB()
     console.error("❌ Failed to connect to MongoDB:", err);
     process.exit(1);
   });
+
+
