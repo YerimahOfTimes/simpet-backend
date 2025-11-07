@@ -59,22 +59,11 @@ exports.registerUser = async (req, res) => {
 
     await newUser.save();
 
-    const token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
+    // 👉 return redirect instruction instead of token
     res.status(201).json({
       success: true,
-      message: "Registration successful",
-      token,
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-      },
+      message: "Registration successful. Please login to continue.",
+      redirect: "/login",
     });
   } catch (error) {
     console.error("Register error:", error);
@@ -89,7 +78,6 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password, isAdmin } = req.body;
 
-    // Choose model based on login type
     const model = isAdmin ? Admin : User;
     const account = await model.findOne({ email }).select("+password");
 
@@ -121,6 +109,7 @@ exports.loginUser = async (req, res) => {
         name: account.name,
         email: account.email,
         role: isAdmin ? "admin" : account.role,
+        profileImage: account.profileImage || "", // 👈 added this
       },
     });
   } catch (error) {
@@ -128,4 +117,5 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
