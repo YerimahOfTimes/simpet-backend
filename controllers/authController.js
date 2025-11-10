@@ -41,9 +41,7 @@ exports.registerUser = async (req, res) => {
         .json({ success: false, message: "Email already registered" });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+    // ✅ Let pre-save handle hashing
     const newUser = new User({
       name,
       email,
@@ -52,14 +50,13 @@ exports.registerUser = async (req, res) => {
       gender,
       age,
       address,
-      password: hashedPassword,
+      password,
       profileImage,
-      role: "user", // default role
+      role: "user",
     });
 
     await newUser.save();
 
-    // 👉 return redirect instruction instead of token
     res.status(201).json({
       success: true,
       message: "Registration successful. Please login to continue.",
@@ -109,7 +106,7 @@ exports.loginUser = async (req, res) => {
         name: account.name,
         email: account.email,
         role: isAdmin ? "admin" : account.role,
-        profileImage: account.profileImage || "", // 👈 added this
+        profileImage: account.profileImage || "",
       },
     });
   } catch (error) {
@@ -117,5 +114,6 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
