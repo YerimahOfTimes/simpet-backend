@@ -24,7 +24,7 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // ==========================
-// CORS FIX — Supports Local + Netlify
+// CORS FIX — Supports Local + Netlify + Production
 // ==========================
 app.use(
   cors({
@@ -52,9 +52,12 @@ app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
 // ==========================
-// Main API Routes
+// Main API Routes (FIXED)
+// Removed `/api` so frontend routes match:
+// /auth/login
+// /auth/register
 // ==========================
-app.use("/api", router);
+app.use("/", router);
 
 // ==========================
 // Default Route
@@ -74,5 +77,3 @@ connectDB().then(() => {
     console.log("🚀 Server running on " + PORT);
   });
 });
-
-
