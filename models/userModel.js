@@ -114,11 +114,15 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
+    // ---------------------------
+    // ⭐ Updated Role System
+    // ---------------------------
     role: {
       type: String,
-      enum: ["user", "admin"],
+      enum: ["user", "admin", "super_admin"],
       default: "user",
     },
+    // ---------------------------
 
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
@@ -156,3 +160,4 @@ userSchema.methods.comparePassword = function (candidate) {
 
 // Export model
 module.exports = mongoose.model("User", userSchema);
+

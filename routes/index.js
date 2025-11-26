@@ -11,6 +11,7 @@ const paymentRoutes = require("./paymentRoutes");
 const chatRoutes = require("./chatRoutes");
 const settingsRoutes = require("./settingsRoutes");
 const forgotPasswordRoutes = require("./forgotPasswordRoutes"); // ✅ Add this line
+const storeRoutes = require("./storeRoutes");
 
 // Mount all routes
 router.use("/auth", authRoutes);
@@ -22,6 +23,7 @@ router.use("/payment", paymentRoutes);
 router.use("/chat", chatRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/password", forgotPasswordRoutes); // ✅ This now works
+router.use("/store", storeRoutes);
 
 module.exports = router;
 

@@ -31,3 +31,18 @@ exports.sendMessage = async (req, res) => {
     res.status(500).json({ message: "Failed to send message", error });
   }
 };
+// Get all chats for logged-in user
+exports.getAllChats = async (req, res) => {
+  try {
+    const chats = await Chat.find({
+      $or: [{ buyerId: req.user.id }, { sellerId: req.user.id }],
+    })
+      .populate("buyerId", "name email")
+      .populate("sellerId", "name email")
+      .sort({ updatedAt: -1 });
+
+    res.json(chats);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to load chats", error });
+  }
+};

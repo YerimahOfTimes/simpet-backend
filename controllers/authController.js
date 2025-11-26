@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 
 /**
  * 🧩 REGISTER USER CONTROLLER
+ * Only registers user, no auto-login
  */
 exports.registerUser = async (req, res) => {
   try {
@@ -41,7 +42,7 @@ exports.registerUser = async (req, res) => {
         .json({ success: false, message: "Email already registered" });
     }
 
-    // ✅ Let pre-save handle hashing
+    // ✅ Let Mongoose pre-save hook hash the password
     const newUser = new User({
       name,
       email,
@@ -50,9 +51,9 @@ exports.registerUser = async (req, res) => {
       gender,
       age,
       address,
-      password,
+      password, // raw password
       profileImage,
-      role: "user",
+      role: "user", // default role
     });
 
     await newUser.save();
@@ -69,7 +70,7 @@ exports.registerUser = async (req, res) => {
 };
 
 /**
- * 🧩 LOGIN CONTROLLER — supports both Users and Admins
+ * 🧩 LOGIN CONTROLLER
  */
 exports.loginUser = async (req, res) => {
   try {
@@ -106,7 +107,6 @@ exports.loginUser = async (req, res) => {
         name: account.name,
         email: account.email,
         role: isAdmin ? "admin" : account.role,
-        profileImage: account.profileImage || "",
       },
     });
   } catch (error) {
@@ -114,6 +114,3 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-
-

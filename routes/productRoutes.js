@@ -6,7 +6,10 @@ const {
   getProductById,
   updateProduct,
   deleteProduct,
+  getSellerProducts, // ✅ Import seller dashboard controller
 } = require("../controllers/productController");
+
+const { protect } = require("../middleware/authMiddleware"); // ✅ JWT auth middleware
 
 const router = express.Router();
 
@@ -40,10 +43,18 @@ const upload = multer({
 });
 
 /* -------------------- PRODUCT ROUTES -------------------- */
-router.post("/", upload.array("images", 5), addProduct);
+// Public routes
 router.get("/", getProducts);
+
+// Seller dashboard route (must be logged in)
+router.get("/seller/me", protect, getSellerProducts); // ✅ placed BEFORE :id
+
+// Public route for specific product by ID
 router.get("/:id", getProductById);
-router.put("/:id", upload.array("images", 5), updateProduct);
-router.delete("/:id", deleteProduct);
+
+// Protected routes (must be logged in)
+router.post("/", protect, upload.array("images", 5), addProduct);
+router.put("/:id", protect, upload.array("images", 5), updateProduct);
+router.delete("/:id", protect, deleteProduct);
 
 module.exports = router;

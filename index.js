@@ -5,10 +5,21 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
 const connectDB = require("./config/db"); // your MongoDB connection file
 const router = require("./routes"); // your routes
 
 const app = express();
+
+// ==========================
+// Ensure uploads folder exists
+// ==========================
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+  console.log("✅ Created uploads directory");
+}
 
 // ==========================
 // Middleware
@@ -27,7 +38,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin like Postman
       if (!origin) return callback(null, true);
       if (allowedOrigins.indexOf(origin) === -1) {
         const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
@@ -76,5 +86,6 @@ connectDB()
     console.error("❌ Failed to connect to MongoDB:", err);
     process.exit(1);
   });
+
 
 
