@@ -56,7 +56,7 @@ app.use("/uploads", express.static("uploads"));
 // /auth/login
 // /auth/register
 // ==========================
-app.use("/", router);
+app.use("/api", router);
 
 // ==========================
 // Default Route
