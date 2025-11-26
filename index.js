@@ -29,10 +29,9 @@ if (!fs.existsSync(uploadDir)) {
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "https://simpet-frontend.netlify.app",
-      "https://simpet.netlify.app"
+      "http://localhost:5173",                 // local dev
+      "http://localhost:3000",                 // if needed
+      "https://simpet-frontend.onrender.com",  // Render frontend
     ],
     methods: "GET,POST,PUT,PATCH,DELETE",
     allowedHeaders: "Content-Type,Authorization",
