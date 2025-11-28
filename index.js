@@ -31,7 +31,7 @@ app.use(
     origin: [
       "http://localhost:5173",                 // local dev
       "http://localhost:3000",                 // if needed
-      "https://simpet-frontend.netlify.app",  // netlify frontend
+      "https://simpet-frontend.onrender.com",  // render frontend
     ],
     methods: "GET,POST,PUT,PATCH,DELETE",
     allowedHeaders: "Content-Type,Authorization",
