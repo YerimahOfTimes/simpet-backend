@@ -1,13 +1,21 @@
+// backend/controllers/productController.js
 const Product = require("../models/productModel");
 
-// Add a product
+// ============================
+// Helper: Force HTTPS on Render
+// ============================
+const buildImageURL = (req, file) => {
+  const host = process.env.RENDER_EXTERNAL_URL || req.get("host");
+  return `https://${host}/${file.path.replace(/\\/g, "/")}`;
+};
+
+// ============================
+// Add Product
+// ============================
 exports.addProduct = async (req, res) => {
   try {
     const imagePaths = req.files
-      ? req.files.map(
-          (file) =>
-            `${req.protocol}://${req.get("host")}/${file.path.replace(/\\/g, "/")}`
-        )
+      ? req.files.map((file) => buildImageURL(req, file))
       : [];
 
     const newProduct = new Product({
@@ -24,20 +32,19 @@ exports.addProduct = async (req, res) => {
       tags: req.body.tags,
       description: req.body.description,
       images: imagePaths,
-      seller: req.user._id, // Logged in seller
-
-      // ✅ ADD STORE SUPPORT HERE
-      store: req.body.store || null, 
+      seller: req.user._id,
+      store: req.body.store || null,
     });
 
     await newProduct.save();
+
     res.status(201).json({
       success: true,
-      message: "Product added",
+      message: "Product added successfully",
       product: newProduct,
     });
   } catch (error) {
-    console.error(error);
+    console.error("ADD PRODUCT ERROR:", error);
     res.status(500).json({
       success: false,
       message: "Failed to add product",
@@ -46,16 +53,18 @@ exports.addProduct = async (req, res) => {
   }
 };
 
+// ============================
 // Get all products
+// ============================
 exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find()
       .sort({ createdAt: -1 })
-      .populate("store"); // ✅ Populate store for frontend display
+      .populate("store");
 
     res.status(200).json({ success: true, products });
   } catch (error) {
-    console.error(error);
+    console.error("GET PRODUCTS ERROR:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch products",
@@ -64,21 +73,23 @@ exports.getProducts = async (req, res) => {
   }
 };
 
+// ============================
 // Get product by ID
+// ============================
 exports.getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate("store"); // ✅ Include store info in product details
+    const product = await Product.findById(req.params.id).populate("store");
 
-    if (!product)
+    if (!product) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
+    }
 
     res.status(200).json({ success: true, product });
   } catch (error) {
-    console.error(error);
+    console.error("GET PRODUCT BY ID ERROR:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch product",
@@ -87,21 +98,22 @@ exports.getProductById = async (req, res) => {
   }
 };
 
+// ============================
 // Update product
+// ============================
 exports.updateProduct = async (req, res) => {
   try {
     const existingProduct = await Product.findById(req.params.id);
-    if (!existingProduct)
+
+    if (!existingProduct) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
+    }
 
     const imagePaths = req.files
-      ? req.files.map(
-          (file) =>
-            `${req.protocol}://${req.get("host")}/${file.path.replace(/\\/g, "/")}`
-        )
+      ? req.files.map((file) => buildImageURL(req, file))
       : existingProduct.images;
 
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -109,8 +121,6 @@ exports.updateProduct = async (req, res) => {
       {
         ...req.body,
         images: imagePaths,
-
-        // ✅ ALLOW STORE UPDATE
         store: req.body.store || existingProduct.store,
       },
       { new: true }
@@ -118,11 +128,11 @@ exports.updateProduct = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Product updated",
+      message: "Product updated successfully",
       product: updatedProduct,
     });
   } catch (error) {
-    console.error(error);
+    console.error("UPDATE PRODUCT ERROR:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update product",
@@ -131,19 +141,26 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
+// ============================
 // Delete product
+// ============================
 exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product)
+
+    if (!product) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
+    }
 
-    res.status(200).json({ success: true, message: "Product deleted" });
+    res.status(200).json({
+      success: true,
+      message: "Product deleted successfully",
+    });
   } catch (error) {
-    console.error(error);
+    console.error("DELETE PRODUCT ERROR:", error);
     res.status(500).json({
       success: false,
       message: "Failed to delete product",
@@ -152,18 +169,20 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-// Seller Dashboard: get seller products
+// ============================
+// Get seller products
+// ============================
 exports.getSellerProducts = async (req, res) => {
   try {
     const sellerId = req.user._id;
 
     const products = await Product.find({ seller: sellerId })
       .sort({ createdAt: -1 })
-      .populate("store"); // ✅ Show store in seller dashboard
+      .populate("store");
 
     res.status(200).json({ success: true, products });
   } catch (error) {
-    console.error(error);
+    console.error("SELLER PRODUCTS ERROR:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch seller products",
