@@ -2,11 +2,11 @@
 const Product = require("../models/productModel");
 
 // ============================
-// Helper: Build HTTPS image URL on Render
+// Helper: Build Public HTTPS URL for Images
 // ============================
 const buildImageURL = (file) => {
-  const host = process.env.RENDER_EXTERNAL_URL; // e.g. simpet-backend.onrender.com
-  if (!host) return file.path.replace(/\\/g, "/"); // fallback for local dev
+  // Use public backend URL from environment variable
+  const host = process.env.RENDER_EXTERNAL_URL || "localhost:5000";
   return `https://${host}/${file.path.replace(/\\/g, "/")}`;
 };
 
@@ -15,7 +15,9 @@ const buildImageURL = (file) => {
 // ============================
 exports.addProduct = async (req, res) => {
   try {
-    const imagePaths = req.files ? req.files.map(buildImageURL) : [];
+    const imagePaths = req.files
+      ? req.files.map((file) => buildImageURL(file))
+      : [];
 
     const newProduct = new Product({
       name: req.body.name,
@@ -23,7 +25,7 @@ exports.addProduct = async (req, res) => {
       price: req.body.price,
       stock: req.body.stock,
       category: req.body.category,
-      condition: req.body.condition,
+      condition: req.body.condition || "New",
       deliveryOption: req.body.deliveryOption,
       location: req.body.location,
       contactNumber: req.body.contactNumber,
@@ -73,17 +75,14 @@ exports.getProducts = async (req, res) => {
 };
 
 // ============================
-// Get Product By ID
+// Get Product by ID
 // ============================
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate("store");
 
     if (!product)
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
+      return res.status(404).json({ success: false, message: "Product not found" });
 
     res.status(200).json({ success: true, product });
   } catch (error) {
@@ -103,12 +102,11 @@ exports.updateProduct = async (req, res) => {
   try {
     const existingProduct = await Product.findById(req.params.id);
     if (!existingProduct)
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
+      return res.status(404).json({ success: false, message: "Product not found" });
 
-    const imagePaths = req.files ? req.files.map(buildImageURL) : existingProduct.images;
+    const imagePaths = req.files
+      ? req.files.map((file) => buildImageURL(file))
+      : existingProduct.images;
 
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
@@ -122,7 +120,7 @@ exports.updateProduct = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Product updated",
+      message: "Product updated successfully",
       product: updatedProduct,
     });
   } catch (error) {
@@ -142,12 +140,9 @@ exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product)
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
+      return res.status(404).json({ success: false, message: "Product not found" });
 
-    res.status(200).json({ success: true, message: "Product deleted" });
+    res.status(200).json({ success: true, message: "Product deleted successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -159,7 +154,7 @@ exports.deleteProduct = async (req, res) => {
 };
 
 // ============================
-// Get Seller Products
+// Seller Dashboard: Get Seller Products
 // ============================
 exports.getSellerProducts = async (req, res) => {
   try {
@@ -179,4 +174,5 @@ exports.getSellerProducts = async (req, res) => {
     });
   }
 };
+
 
