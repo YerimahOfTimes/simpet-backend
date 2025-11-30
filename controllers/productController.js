@@ -1,46 +1,45 @@
 // backend/controllers/productController.js
 const Product = require("../models/productModel");
 
-// =============================================================
-// Helper: Build PUBLIC image URL (Render or Localhost)
-// =============================================================
+// ============================
+// Helper: Build Full HTTPS URL for Images
+// ============================
 const buildImageURL = (file) => {
   if (!file) return null;
 
+  // Render auto-exposes HTTPS domain in this variable
   const host =
     process.env.RENDER_EXTERNAL_URL ||
-    process.env.BACKEND_URL || 
-    "http://localhost:5000";
+    "https://simpet-backend-1.onrender.com";
 
-  // Ensure no backslashes on Windows
-  const normalizedPath = file.path.replace(/\\/g, "/");
-
-  return `${host}/${normalizedPath}`;
+  return `${host}/${file.path.replace(/\\/g, "/")}`;
 };
 
-// =============================================================
-// Ensure ALL product images have correct HTTPS URLs
-// =============================================================
-const fixProductImageURLs = (product) => {
-  if (!product.images || product.images.length === 0) return product;
+// ============================
+// Helper: Fix broken image URLs (e.g., "uploads/XXX.jpg")
+// ============================
+const fixImageURLs = (images) => {
+  if (!images || !images.length) return [];
 
-  product.images = product.images.map((img) => {
-    // If already full URL → keep it
-    if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const host =
+    process.env.RENDER_EXTERNAL_URL ||
+    "https://simpet-backend-1.onrender.com";
 
-    // If only filename stored, convert
-    return `${process.env.RENDER_EXTERNAL_URL || "http://localhost:5000"}/uploads/${img}`;
+  return images.map((img) => {
+    // If image already has http or https — keep it
+    if (img.startsWith("http")) return img;
+
+    // Otherwise convert to full HTTPS URL
+    return `${host}/${img.replace(/\\/g, "/")}`;
   });
-
-  return product;
 };
 
-// =============================================================
+// ============================
 // Add Product
-// =============================================================
+// ============================
 exports.addProduct = async (req, res) => {
   try {
-    const imagePaths = req.files?.length
+    const imagePaths = req.files
       ? req.files.map((file) => buildImageURL(file))
       : [];
 
@@ -50,7 +49,7 @@ exports.addProduct = async (req, res) => {
       price: req.body.price,
       stock: req.body.stock,
       category: req.body.category,
-      condition: req.body.condition ?? "New",
+      condition: req.body.condition || "New",
       deliveryOption: req.body.deliveryOption,
       location: req.body.location,
       contactNumber: req.body.contactNumber,
@@ -59,7 +58,7 @@ exports.addProduct = async (req, res) => {
       description: req.body.description,
       images: imagePaths,
       seller: req.user._id,
-      store: req.body.store || null, // store support preserved
+      store: req.body.store || null,
     });
 
     await newProduct.save();
@@ -70,7 +69,7 @@ exports.addProduct = async (req, res) => {
       product: newProduct,
     });
   } catch (error) {
-    console.error("Add Product Error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to add product",
@@ -79,21 +78,24 @@ exports.addProduct = async (req, res) => {
   }
 };
 
-// =============================================================
+// ============================
 // Get All Products
-// =============================================================
+// ============================
 exports.getProducts = async (req, res) => {
   try {
     let products = await Product.find()
       .sort({ createdAt: -1 })
       .populate("store");
 
-    // Fix URLs before sending
-    products = products.map((p) => fixProductImageURLs(p));
+    // Fix URLs before sending to frontend
+    products = products.map((p) => ({
+      ...p._doc,
+      images: fixImageURLs(p.images),
+    }));
 
     res.status(200).json({ success: true, products });
   } catch (error) {
-    console.error("Get Products Error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch products",
@@ -102,21 +104,27 @@ exports.getProducts = async (req, res) => {
   }
 };
 
-// =============================================================
-// Get Product by ID
-// =============================================================
+// ============================
+// Get Product By ID
+// ============================
 exports.getProductById = async (req, res) => {
   try {
     let product = await Product.findById(req.params.id).populate("store");
 
     if (!product)
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
 
-    product = fixProductImageURLs(product);
+    // Fix image URLs
+    product = {
+      ...product._doc,
+      images: fixImageURLs(product.images),
+    };
 
     res.status(200).json({ success: true, product });
   } catch (error) {
-    console.error("Get Product Error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch product",
@@ -125,36 +133,41 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// =============================================================
+// ============================
 // Update Product
-// =============================================================
+// ============================
 exports.updateProduct = async (req, res) => {
   try {
-    const existing = await Product.findById(req.params.id);
-    if (!existing)
-      return res.status(404).json({ success: false, message: "Product not found" });
+    const existingProduct = await Product.findById(req.params.id);
+    if (!existingProduct)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
 
-    const newImages = req.files?.length
+    const newImages = req.files
       ? req.files.map((file) => buildImageURL(file))
-      : existing.images;
+      : existingProduct.images;
 
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
       {
         ...req.body,
         images: newImages,
-        store: req.body.store || existing.store,
+        store: req.body.store || existingProduct.store,
       },
       { new: true }
     ).populate("store");
 
+    // Fix image URLs
+    updatedProduct.images = fixImageURLs(updatedProduct.images);
+
     res.status(200).json({
       success: true,
       message: "Product updated successfully",
-      product: fixProductImageURLs(updatedProduct),
+      product: updatedProduct,
     });
   } catch (error) {
-    console.error("Update Product Error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to update product",
@@ -163,18 +176,23 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// =============================================================
+// ============================
 // Delete Product
-// =============================================================
+// ============================
 exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product)
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
 
-    res.status(200).json({ success: true, message: "Product deleted successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Product deleted successfully",
+    });
   } catch (error) {
-    console.error("Delete Product Error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to delete product",
@@ -183,9 +201,9 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-// =============================================================
-// Seller Dashboard: Fetch Seller Products
-// =============================================================
+// ============================
+// Get Seller Products
+// ============================
 exports.getSellerProducts = async (req, res) => {
   try {
     const sellerId = req.user._id;
@@ -194,11 +212,15 @@ exports.getSellerProducts = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate("store");
 
-    products = products.map((p) => fixProductImageURLs(p));
+    // Fix URLs
+    products = products.map((p) => ({
+      ...p._doc,
+      images: fixImageURLs(p.images),
+    }));
 
     res.status(200).json({ success: true, products });
   } catch (error) {
-    console.error("Seller Products Error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch seller products",
@@ -206,6 +228,3 @@ exports.getSellerProducts = async (req, res) => {
     });
   }
 };
-
-
-
