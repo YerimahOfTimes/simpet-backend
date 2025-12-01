@@ -1,9 +1,10 @@
+// fixImages.js
 import dotenv from "dotenv";
 dotenv.config();
 import mongoose from "mongoose";
-import Product from "./models/productModel.js"; // match actual file
+import Product from "./models/productModel.js";
 
-const backendUrl = process.env.BACKEND_URL || "https://simpet-backend-1.onrender.com";
+const backendUrl = process.env.RENDER_EXTERNAL_URL || "https://simpet-backend-1.onrender.com";
 
 async function fixOldImages() {
   try {
@@ -18,10 +19,8 @@ async function fixOldImages() {
       if (!product.images || product.images.length === 0) continue;
 
       const fixedImages = product.images.map((img) => {
-        // Skip already correct URLs
-        if (!img || img.startsWith("http")) return img;
-
-        // Extract filename
+        if (!img) return null;
+        if (img.startsWith("http")) return img;
         const filename = img.replace(/\\/g, "/").split("/").pop();
         return `${backendUrl}/uploads/${filename}`;
       });
@@ -31,15 +30,16 @@ async function fixOldImages() {
         { $set: { images: fixedImages } }
       );
 
-      console.log(`Updated product ${product._id}`);
+      console.log(`Updated images for product ${product._id}`);
     }
 
-    console.log("Image fixing completed ✓");
+    console.log("✅ All product images fixed!");
     mongoose.connection.close();
   } catch (err) {
-    console.error("Error:", err);
+    console.error("Error fixing images:", err);
     mongoose.connection.close();
   }
 }
 
 fixOldImages();
+
