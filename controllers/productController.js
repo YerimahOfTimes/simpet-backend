@@ -1,3 +1,4 @@
+// backend/controllers/productController.js
 const Product = require("../models/productModel");
 
 // ================================================
@@ -5,10 +6,7 @@ const Product = require("../models/productModel");
 // ================================================
 const buildImageURL = (file) => {
   if (!file) return null;
-  const host =
-    process.env.RENDER_EXTERNAL_URL ||
-    "https://simpet-backend-1.onrender.com";
-
+  const host = process.env.RENDER_EXTERNAL_URL || "https://simpet-backend-1.onrender.com";
   return `${host}/uploads/${file.filename}`;
 };
 
@@ -17,12 +15,8 @@ const buildImageURL = (file) => {
 // ================================================
 const fixImageURLs = (images = []) => {
   if (!images.length) return [];
-
-  const host =
-    process.env.RENDER_EXTERNAL_URL ||
-    "https://simpet-backend-1.onrender.com";
-
-  return images.map((img) => {
+  const host = process.env.RENDER_EXTERNAL_URL || "https://simpet-backend-1.onrender.com";
+  return images.map(img => {
     if (!img) return null;
     if (img.startsWith("http")) return img;
     return `${host}/${img.replace(/\\/g, "/")}`;
@@ -41,9 +35,7 @@ exports.addProduct = async (req, res) => {
       });
     }
 
-    const imagePaths = req.files
-      ? req.files.map((file) => buildImageURL(file))
-      : [];
+    const imagePaths = req.files ? req.files.map(buildImageURL) : [];
 
     const newProduct = new Product({
       name: req.body.name,
@@ -85,11 +77,9 @@ exports.addProduct = async (req, res) => {
 // ================================================
 exports.getProducts = async (req, res) => {
   try {
-    let products = await Product.find()
-      .sort({ createdAt: -1 })
-      .populate("store", "name"); // ✅ populate store name
+    let products = await Product.find().sort({ createdAt: -1 }).populate("store");
 
-    products = products.map((p) => ({
+    products = products.map(p => ({
       ...p._doc,
       images: fixImageURLs(p.images),
       sellerPhone: p.contactNumber || null,
@@ -112,15 +102,11 @@ exports.getProducts = async (req, res) => {
 // ================================================
 exports.getProductById = async (req, res) => {
   try {
-    let product = await Product.findById(req.params.id).populate(
-      "store",
-      "name"
-    );
+    let product = await Product.findById(req.params.id).populate("store");
 
-    if (!product)
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found" });
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
 
     product = {
       ...product._doc,
@@ -146,18 +132,13 @@ exports.getProductById = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const existingProduct = await Product.findById(req.params.id);
-
-    if (!existingProduct)
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found" });
-
-    let newImages;
-    if (req.files && req.files.length > 0) {
-      newImages = req.files.map((file) => buildImageURL(file));
-    } else {
-      newImages = existingProduct.images;
+    if (!existingProduct) {
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
+
+    const newImages = req.files && req.files.length > 0
+      ? req.files.map(buildImageURL)
+      : existingProduct.images;
 
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
@@ -167,7 +148,7 @@ exports.updateProduct = async (req, res) => {
         store: req.body.store || existingProduct.store,
       },
       { new: true }
-    ).populate("store", "name");
+    ).populate("store");
 
     updatedProduct.images = fixImageURLs(updatedProduct.images);
     updatedProduct.sellerPhone = updatedProduct.contactNumber || null;
@@ -194,11 +175,9 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
-
-    if (!product)
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found" });
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
 
     res.status(200).json({
       success: true,
@@ -221,11 +200,9 @@ exports.getSellerProducts = async (req, res) => {
   try {
     const sellerId = req.user._id;
 
-    let products = await Product.find({ seller: sellerId })
-      .sort({ createdAt: -1 })
-      .populate("store", "name");
+    let products = await Product.find({ seller: sellerId }).sort({ createdAt: -1 }).populate("store");
 
-    products = products.map((p) => ({
+    products = products.map(p => ({
       ...p._doc,
       images: fixImageURLs(p.images),
       sellerPhone: p.contactNumber || null,
