@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import mongoose from "mongoose";
-import Product from "./models/Product.js";
+import Product from "./models/productModel.js"; // match actual file
 
 const backendUrl = process.env.BACKEND_URL || "https://simpet-backend-1.onrender.com";
 
@@ -15,25 +15,26 @@ async function fixOldImages() {
     console.log(`Found ${products.length} products`);
 
     for (const product of products) {
-      const oldImage = product.image;
+      if (!product.images || product.images.length === 0) continue;
 
-      // Only fix images starting with http:// or missing domain
-      if (!oldImage || oldImage.startsWith("https://")) continue;
+      const fixedImages = product.images.map((img) => {
+        // Skip already correct URLs
+        if (!img || img.startsWith("http")) return img;
 
-      let filename = oldImage.replace(/\\/g, "/").split("/").pop();
-      const newImageUrl = `${backendUrl}/uploads/${filename}`;
+        // Extract filename
+        const filename = img.replace(/\\/g, "/").split("/").pop();
+        return `${backendUrl}/uploads/${filename}`;
+      });
 
-      console.log(`Fixing: ${oldImage} → ${newImageUrl}`);
-
-      // ❗ IMPORTANT: Use updateOne (bypasses all validations including seller)
       await Product.updateOne(
         { _id: product._id },
-        { $set: { image: newImageUrl } }
+        { $set: { images: fixedImages } }
       );
+
+      console.log(`Updated product ${product._id}`);
     }
 
     console.log("Image fixing completed ✓");
-
     mongoose.connection.close();
   } catch (err) {
     console.error("Error:", err);
