@@ -1,4 +1,3 @@
-// backend/controllers/productController.js
 const Product = require("../models/productModel");
 
 // ================================================
@@ -6,12 +5,10 @@ const Product = require("../models/productModel");
 // ================================================
 const buildImageURL = (file) => {
   if (!file) return null;
-
   const host =
     process.env.RENDER_EXTERNAL_URL ||
     "https://simpet-backend-1.onrender.com";
 
-  // Use filename instead of file.path because Render rewrites paths
   return `${host}/uploads/${file.filename}`;
 };
 
@@ -27,11 +24,7 @@ const fixImageURLs = (images = []) => {
 
   return images.map((img) => {
     if (!img) return null;
-
-    // Already full URL
     if (img.startsWith("http")) return img;
-
-    // Fix local paths e.g. "uploads/image.jpg"
     return `${host}/${img.replace(/\\/g, "/")}`;
   });
 };
@@ -41,7 +34,6 @@ const fixImageURLs = (images = []) => {
 // ================================================
 exports.addProduct = async (req, res) => {
   try {
-    // Ensure seller exists (prevents seller: Path required error)
     if (!req.user || !req.user._id) {
       return res.status(400).json({
         success: false,
@@ -95,11 +87,13 @@ exports.getProducts = async (req, res) => {
   try {
     let products = await Product.find()
       .sort({ createdAt: -1 })
-      .populate("store");
+      .populate("store", "name"); // ✅ populate store name
 
     products = products.map((p) => ({
       ...p._doc,
       images: fixImageURLs(p.images),
+      sellerPhone: p.contactNumber || null,
+      sellerEmail: p.email || null,
     }));
 
     res.status(200).json({ success: true, products });
@@ -118,7 +112,10 @@ exports.getProducts = async (req, res) => {
 // ================================================
 exports.getProductById = async (req, res) => {
   try {
-    let product = await Product.findById(req.params.id).populate("store");
+    let product = await Product.findById(req.params.id).populate(
+      "store",
+      "name"
+    );
 
     if (!product)
       return res
@@ -128,6 +125,8 @@ exports.getProductById = async (req, res) => {
     product = {
       ...product._doc,
       images: fixImageURLs(product.images),
+      sellerPhone: product.contactNumber || null,
+      sellerEmail: product.email || null,
     };
 
     res.status(200).json({ success: true, product });
@@ -154,12 +153,9 @@ exports.updateProduct = async (req, res) => {
         .json({ success: false, message: "Product not found" });
 
     let newImages;
-
-    // If new files uploaded → replace images
     if (req.files && req.files.length > 0) {
       newImages = req.files.map((file) => buildImageURL(file));
     } else {
-      // Keep old images if no new upload
       newImages = existingProduct.images;
     }
 
@@ -171,9 +167,11 @@ exports.updateProduct = async (req, res) => {
         store: req.body.store || existingProduct.store,
       },
       { new: true }
-    ).populate("store");
+    ).populate("store", "name");
 
     updatedProduct.images = fixImageURLs(updatedProduct.images);
+    updatedProduct.sellerPhone = updatedProduct.contactNumber || null;
+    updatedProduct.sellerEmail = updatedProduct.email || null;
 
     res.status(200).json({
       success: true,
@@ -225,11 +223,13 @@ exports.getSellerProducts = async (req, res) => {
 
     let products = await Product.find({ seller: sellerId })
       .sort({ createdAt: -1 })
-      .populate("store");
+      .populate("store", "name");
 
     products = products.map((p) => ({
       ...p._doc,
       images: fixImageURLs(p.images),
+      sellerPhone: p.contactNumber || null,
+      sellerEmail: p.email || null,
     }));
 
     res.status(200).json({ success: true, products });
@@ -242,4 +242,3 @@ exports.getSellerProducts = async (req, res) => {
     });
   }
 };
-
