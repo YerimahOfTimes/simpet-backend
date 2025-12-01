@@ -41,6 +41,7 @@ const fixImageURLs = (images = []) => {
 // ================================================
 exports.addProduct = async (req, res) => {
   try {
+    // Ensure seller exists
     if (!req.user || !req.user._id) {
       return res.status(400).json({
         success: false,
@@ -61,8 +62,8 @@ exports.addProduct = async (req, res) => {
       condition: req.body.condition || "New",
       deliveryOption: req.body.deliveryOption,
       location: req.body.location,
-      contactNumber: req.body.contactNumber,
-      email: req.body.email,
+      contactNumber: req.user.contactNumber, // ✅ seller phone
+      email: req.user.email,                 // ✅ seller email
       tags: req.body.tags,
       description: req.body.description,
       images: imagePaths,
@@ -94,14 +95,11 @@ exports.getProducts = async (req, res) => {
   try {
     let products = await Product.find()
       .sort({ createdAt: -1 })
-      .populate("store seller");
+      .populate("store");
 
-    // Fix image URLs
     products = products.map((p) => ({
       ...p._doc,
       images: fixImageURLs(p.images),
-      email: p.email || (p.seller ? p.seller.email : ""),
-      contactNumber: p.contactNumber || (p.seller ? p.seller.contactNumber : ""),
     }));
 
     res.status(200).json({ success: true, products });
@@ -120,27 +118,19 @@ exports.getProducts = async (req, res) => {
 // ================================================
 exports.getProductById = async (req, res) => {
   try {
-    let product = await Product.findById(req.params.id).populate("store seller");
+    let product = await Product.findById(req.params.id).populate("store");
 
     if (!product)
       return res
         .status(404)
         .json({ success: false, message: "Product not found" });
 
-    // Fix image URLs
-    const images = fixImageURLs(product.images);
-
-    const email = product.email || (product.seller ? product.seller.email : "");
-    const contactNumber = product.contactNumber || (product.seller ? product.seller.contactNumber : "");
-
-    const productData = {
+    product = {
       ...product._doc,
-      images,
-      email,
-      contactNumber,
+      images: fixImageURLs(product.images),
     };
 
-    res.status(200).json({ success: true, product: productData });
+    res.status(200).json({ success: true, product });
   } catch (error) {
     console.error("GET PRODUCT BY ID ERROR:", error);
     res.status(500).json({
@@ -179,11 +169,9 @@ exports.updateProduct = async (req, res) => {
         store: req.body.store || existingProduct.store,
       },
       { new: true }
-    ).populate("store seller");
+    ).populate("store");
 
     updatedProduct.images = fixImageURLs(updatedProduct.images);
-    updatedProduct.email = updatedProduct.email || (updatedProduct.seller ? updatedProduct.seller.email : "");
-    updatedProduct.contactNumber = updatedProduct.contactNumber || (updatedProduct.seller ? updatedProduct.seller.contactNumber : "");
 
     res.status(200).json({
       success: true,
@@ -235,13 +223,11 @@ exports.getSellerProducts = async (req, res) => {
 
     let products = await Product.find({ seller: sellerId })
       .sort({ createdAt: -1 })
-      .populate("store seller");
+      .populate("store");
 
     products = products.map((p) => ({
       ...p._doc,
       images: fixImageURLs(p.images),
-      email: p.email || (p.seller ? p.seller.email : ""),
-      contactNumber: p.contactNumber || (p.seller ? p.seller.contactNumber : ""),
     }));
 
     res.status(200).json({ success: true, products });
@@ -254,3 +240,4 @@ exports.getSellerProducts = async (req, res) => {
     });
   }
 };
+
